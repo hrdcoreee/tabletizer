@@ -2,7 +2,7 @@
 
 Turn your Android smartphone or tablet into a high-performance graphics tablet for Windows (specifically optimized for osu! and low-latency drawing).
 
-Unlike legacy solutions, **tabletizer!** connects directly to custom **OpenTabletDriver** build over a lightweight TCP stream — **no USB/IP drivers, no separate companion clients, and zero kernel-mode driver hassles.**
+Unlike legacy solutions, **tabletizer!** connects directly to custom **OpenTabletDriver** build over a lightweight TCP stream — **no other software and zero kernel-mode driver hassles.**
 
 ---
 
