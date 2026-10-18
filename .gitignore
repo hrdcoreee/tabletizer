@@ -58,11 +58,10 @@ desktop_client/dist/
 desktop_client/*.spec
 *.spec
 
-keys/
-desktop_client/bin/
 
 AndroidTablet.json
-*.dm
 
-# usbip-win2 source (large third-party dependency)
-usbip-win2/
+# Signing & Keystores
+key.properties
+*.jks
+*.keystore

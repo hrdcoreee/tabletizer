@@ -1,56 +1,62 @@
 # tabletizer!
 
-A tool that allows you to use your Android device as a graphics tablet on Windows, it was created primarily for osu!
+Turn your Android smartphone or tablet into a high-performance graphics tablet for Windows (specifically optimized for osu! and low-latency drawing).
 
-The project consists of two components:
-1. An Android application that acts as a USB/IP server, capturing touch and pen inputs.
-2. A Windows desktop client that automates dependency management (ADB, USB/IP), profile generation, and connection handling.
+Unlike legacy solutions, **tabletizer!** connects directly to **OpenTabletDriver** over a lightweight TCP stream — **no USB/IP drivers, no separate companion clients, and zero kernel-mode driver hassles.**
 
-## Requirements
+---
 
-- Windows 10/11
-- OpenTabletDriver installed on the PC
-- Developer Options and USB Debugging enabled on the Android device (required for wired connections or automated profile generation)
-- More requirements that you can install from companion app
+## Architecture
 
+- **Android App (`app`)**: Captures touch and stylus inputs at native screen polling rates (60Hz / 90Hz / 120Hz / 240Hz+) and streams raw FMA tablet reports directly over TCP port 3240 using an asynchronous zero-allocation ring buffer.
+- **OpenTabletDriver Integration**: An embedded `AndroidTabletHub` inside OpenTabletDriver automatically detects ADB, sets up port forwarding, and exposes the Android device as a native virtual tablet.
 
-## Setup
+---
 
-1. Install the tabletizer APK on your Android device.
-2. Launch the desktop client on your desktop.
-3. Click "Auto-Generate Profile" in the desktop client while the device is connected via USB. This will automatically query your screen resolution and DPI to generate an accurate OpenTabletDriver configuration.
-   - Alternatively, use "Manual Config" to input your device's screen width, height, and DPI manually without requiring an ADB connection.
+## Features
 
-## Usage
+- **Direct OpenTabletDriver Support**: Plug in and play. OTD automatically handles connection, filters, and absolute coordinate mapping.
+- **Ultra-Low Latency**: Non-blocking touch pipeline with historical batch coordinate sampling and `TCP_NODELAY`.
+- **Live Diagnostics**:
+  - Live **TPS (Touches Per Second)** counter and packet counter on screen.
+  - Connection status chip with mode indicator (`USB (ADB)` vs `Wi-Fi`).
+  - Automatic Wi-Fi IP discovery.
+  - In-app crash reporter and diagnostic guide.
+- **Configurable Work Area**:
+  - Aspect ratio presets: `16:9`, `4:3`, `Fullscreen`.
+  - Area scale presets: `100%`, `80%`, `65% (Recommended)`, `50%`, `35%`.
+  - Position anchors: `Center`, `Bottom Right`, `Bottom Left`, `Right Center`.
+  - Interactive on-screen drag and resize mode.
+  - Real-time two-way active area synchronization with OpenTabletDriver.
 
-You can connect the device to your PC either via a USB cable or over the local Wi-Fi network.
+---
 
-### Wired (USB)
-1. Enable ADB in developer settings on you phone and connect your device to the PC via USB.
-2. Select the "Wired (USB)" mode in the desktop client and click "Connect".
-3. Open the tabletizer app on your Android device.
+## Quick Start
 
-### Wireless (Wi-Fi)
-1. Ensure both devices are connected to the same local network.
-2. Open the tabletizer app on your Android device.
-3. Select the "Wireless (Wi-Fi)" mode in the desktop client, enter the IP address of your device, and click "Connect".
+### 1. Wired Connection (USB / ADB — Recommended)
+1. Install client app on your phone.
+2. Turn ON **USB Debugging** in Android Developer Options.
+3. Connect your phone to PC via USB and accept the "Allow USB debugging" prompt.
+4. Download and Launch OpenTabletDriver on PC — it connects automatically!
+
+### 2. Wireless Connection (Wi-Fi)
+1. Connect PC and phone to the same Wi-Fi network.
+2. Open the tabletizer app on your phone (your local Wi-Fi IP will be displayed on screen).
+3. Download and Launch OpenTabletDriver.
+
+---
 
 ## Building from Source
 
-### Android App
-To compile the APK using Gradle:
+### Android APK (Debug)
 ```bash
-./gradlew assembleDebug
+./gradlew.bat assembleDebug
 ```
+The compiled APK will be generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
-### Desktop Client
-To build a standalone Windows executable, ensure Python 3 is installed and run:
+### Android APK (Release)
+Configure `key.properties` with your keystore credentials and run:
 ```bash
-pip install pyinstaller
-pip install customtkinter
-pyinstaller --noconfirm --onefile --windowed desktop_client/main.py
+./gradlew.bat assembleRelease
 ```
-or run
-```
-desktop_client/build.bat
-```
+The signed release APK will be generated at `app/build/outputs/apk/release/app-release.apk`.

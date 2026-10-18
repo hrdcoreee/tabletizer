@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:keepScreenOn="true">
+
+    <com.hrdcoreee.tabletizer.TabletAreaView
+        android:id="@+id/tabletAreaView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- Active Mode Status Badge (top-left) -->
+    <TextView
+        android:id="@+id/tvStatusBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="12dp"
+        android:background="@drawable/button_pill_bg"
+        android:textColor="#00E5FF"
+        android:textSize="12sp"
+        android:paddingLeft="14dp"
+        android:paddingRight="14dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone"
+        android:text="&#128994; Connected &#8226; 0 TPS" />
+
+    <!-- Floating HUD Settings Pill (top-right) -->
+    <TextView
+        android:id="@+id/btnSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:background="@drawable/button_pill_bg"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:text="&#9881; 16:9 &#8226; 120Hz" />
+
+    <!-- Disconnected Diagnostic Overlay -->
+    <LinearLayout
+        android:id="@+id/overlayDisconnected"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#E60A0A0A"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&#128308; Disconnected"
+            android:textColor="#FF5252"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvServerInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Port: 3240 &#8226; Wi-Fi IP: Detecting..."
+            android:textColor="#00E5FF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:baselineAligned="false">
+
+            <!-- USB Mode Card -->
+            <LinearLayout
+                android:layout_width="280dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/panel_glass_bg"
+                android:orientation="vertical"
+                android:padding="14dp"
+                android:layout_marginEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="&#128268; USB Mode (Zero Latency)"
+                    android:textColor="#00E5FF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1. Plug USB cable into PC\n2. Turn ON 'USB Debugging' in Android Developer Options\n3. Tap 'Allow' on the phone prompt\n4. Open OpenTabletDriver &#8212; connects automatically!"
+                    android:textColor="#B0BEC5"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="3dp"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+
+            <!-- Wi-Fi Mode Card -->
+            <LinearLayout
+                android:layout_width="280dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/panel_glass_bg"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="&#128246; Wi-Fi Mode (Wireless)"
+                    android:textColor="#FFD54F"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvWifiCardText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1. Connect phone &amp; PC to same Wi-Fi\n2. Open OpenTabletDriver\n3. Auto-connects via UDP beacon\n(or set IP in OTD Settings dialog)"
+                    android:textColor="#B0BEC5"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="3dp"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnHelp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&#10067; Troubleshooting &amp; Diagnostics"
+            android:background="@drawable/button_pill_bg"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="16dp" />
+    </LinearLayout>
+
+    <!-- Floating Glassmorphic Settings Panel (Replaces old AlertDialogs!) -->
+    <FrameLayout
+        android:id="@+id/panelSettingsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#B3000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/cardSettings"
+            android:layout_width="480dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/panel_glass_bg"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <!-- Header -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="&#9881; tabletizer Settings"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_centerVertical="true" />
+
+                <TextView
+                    android:id="@+id/btnCloseSettings"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_alignParentEnd="true"
+                    android:gravity="center"
+                    android:text="&#10005;"
+                    android:textColor="#90FFFFFF"
+                    android:textSize="16sp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </RelativeLayout>
+
+            <!-- Refresh Rate -->
+            <TextView
+                android:id="@+id/tvHzBadge"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="&#9889; 120 Hz Active"
+                android:textColor="#00E5FF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:padding="10dp"
+                android:background="@drawable/button_accent_bg"
+                android:layout_marginTop="14dp" />
+
+            <!-- Aspect Ratio Quick Select -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ASPECT RATIO"
+                android:textColor="#80FFFFFF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:layout_marginTop="14dp"
+                android:letterSpacing="0.05" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="6dp">
+
+                <TextView
+                    android:id="@+id/btnRatio169"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="16:9"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:padding="10dp"
+                    android:background="@drawable/button_accent_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnRatio43"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="4:3 (osu!)"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:padding="10dp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnRatioFull"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Full Screen"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:padding="10dp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+
+            <!-- Position Quick Select -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="POSITION"
+                android:textColor="#80FFFFFF"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:layout_marginTop="12dp"
+                android:letterSpacing="0.05" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="6dp">
+
+                <TextView
+                    android:id="@+id/btnPosCenter"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Center"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:padding="8dp"
+                    android:background="@drawable/button_accent_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:id="@+id/btnPosRightBottom"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Bottom-R"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:padding="8dp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:id="@+id/btnPosLeftBottom"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Bottom-L"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:padding="8dp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:id="@+id/btnPosRightCenter"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Right-C"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:padding="8dp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+
+            <!-- Interactive Area Drag Button -->
+            <TextView
+                android:id="@+id/btnInteractiveEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="&#9999; Move &amp; Resize Area on Screen"
+                android:textColor="#00E5FF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:padding="12dp"
+                android:background="@drawable/button_accent_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginTop="14dp" />
+
+            <!-- Diagnostics & Crash Log -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:id="@+id/btnOpenDiagnostics"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="&#10067; Diagnostics"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:padding="10dp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="6dp" />
+
+                <TextView
+                    android:id="@+id/btnOpenCrashLog"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="&#128203; Crash Log"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:padding="10dp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Diagnostics Overlay Modal -->
+    <FrameLayout
+        android:id="@+id/panelDiagnosticsModal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#B3000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="520dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/panel_glass_bg"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="&#10067; Diagnostics &amp; Connection Info"
+                    android:textColor="#00E5FF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_centerVertical="true" />
+
+                <TextView
+                    android:id="@+id/btnCloseDiagnostics"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_alignParentEnd="true"
+                    android:gravity="center"
+                    android:text="&#10005;"
+                    android:textColor="#90FFFFFF"
+                    android:textSize="16sp"
+                    android:background="@drawable/button_pill_bg"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/tvDiagnosticsBody"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#E0E0E0"
+                android:textSize="11sp"
+                android:lineSpacingExtra="3dp"
+                android:layout_marginTop="12dp"
+                android:text="Loading diagnostics..." />
+
+            <TextView
+                android:id="@+id/btnDoneDiagnostics"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Close"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:padding="10dp"
+                android:background="@drawable/button_pill_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginTop="14dp" />
+        </LinearLayout>
+    </FrameLayout>
+
+</FrameLayout>
