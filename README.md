@@ -24,7 +24,6 @@ Unlike legacy solutions, **tabletizer!** connects directly to **OpenTabletDriver
   - In-app crash reporter and diagnostic guide.
 - **Configurable Work Area**:
   - Aspect ratio presets: `16:9`, `4:3`, `Fullscreen`.
-  - Area scale presets: `100%`, `80%`, `65% (Recommended)`, `50%`, `35%`.
   - Position anchors: `Center`, `Bottom Right`, `Bottom Left`, `Right Center`.
   - Interactive on-screen drag and resize mode.
   - Real-time two-way active area synchronization with OpenTabletDriver.
