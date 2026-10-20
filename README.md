@@ -8,7 +8,7 @@ Connects directly to a custom **OpenTabletDriver** build over TCP.
 
 ## How it works
 
-- **Android app** — captures touch and stylus input at the screen's native polling rate (60 / 90 / 120 / 240+ Hz) and streams it to your PC over TCP (port 3240).
+- **Android app** — captures touch and stylus input at the screen's native polling rate (60 / 90 / 120 / 240+ Hz) and streams it to your PC over TCP.
 - **OpenTabletDriver** — automatically detects the device via ADB, sets up port forwarding, and treats your phone as a real graphics tablet.
 
 ---
