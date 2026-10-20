@@ -1,4 +1,4 @@
-# tabletizer!
+![tabletizer! banner](https://raw.githubusercontent.com/hrdcoreee/tabletizer/refs/heads/main/banner.png)
 
 Turn your Android smartphone or tablet into a high-performance graphics tablet for Windows (specifically optimized for osu! and low-latency drawing).
 
