@@ -69,22 +69,19 @@ public class TabletServerService extends Service {
     private static volatile OutputStream activeOutputStream = null;
     private static volatile Socket activeSocket = null;
 
-    // Zero-allocation circular ring buffer for asynchronous high-speed network transmission
-    private static final int RING_SIZE = 256;
-    private static final byte[][] ringBuffer = new byte[RING_SIZE][TabletProtocol.PACKET_SIZE];
-    private static volatile int writeIndex = 0;
-    private static volatile int readIndex = 0;
+    // Keep only the latest motion report. Sending stale positions after a short network stall
+    // is worse for tablet latency than intentionally coalescing intermediate movement samples.
+    private static final byte[] pendingTouchPacket = new byte[TabletProtocol.PACKET_SIZE];
+    private static final byte[] sendingTouchPacket = new byte[TabletProtocol.PACKET_SIZE];
+    private static boolean hasPendingTouchPacket = false;
     private static final Object queueLock = new Object();
 
-    // Cached configuration sync packet (Report ID 2)
-    private static final byte[] lastConfigPacket = new byte[12];
+    // Control packets are separate from motion so configuration is never delayed behind touch input.
+    private static final byte[] lastConfigPacket = new byte[TabletProtocol.PACKET_SIZE];
+    private static final byte[] pendingConfigPacket = new byte[TabletProtocol.PACKET_SIZE];
+    private static final byte[] sendingConfigPacket = new byte[TabletProtocol.PACKET_SIZE];
+    private static boolean hasPendingConfigPacket = false;
     private static volatile boolean hasConfigPacket = false;
-
-    static {
-        for (int i = 0; i < RING_SIZE; i++) {
-            ringBuffer[i] = new byte[12];
-        }
-    }
 
     private ServerSocket serverSocket;
     private Thread serverThread;
@@ -157,18 +154,9 @@ public class TabletServerService extends Service {
 
         try {
             synchronized (queueLock) {
-                int currentWrite = writeIndex;
-                int nextWrite = (currentWrite + 1) % RING_SIZE;
-
-                // If buffer is full, advance read pointer to discard oldest event
-                if (nextWrite == readIndex) {
-                    readIndex = (readIndex + 1) % RING_SIZE;
-                }
-
-                TabletProtocol.writeTouch(ringBuffer[currentWrite], inRange, x, y, pressure, btn1, btn2);
-
-                writeIndex = nextWrite;
-                queueLock.notify();
+                TabletProtocol.writeTouch(pendingTouchPacket, inRange, x, y, pressure, btn1, btn2);
+                hasPendingTouchPacket = true;
+                queueLock.notifyAll();
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error queuing touch packet", t);
@@ -185,14 +173,9 @@ public class TabletServerService extends Service {
                 hasConfigPacket = true;
 
                 if (isConnected.get() && activeOutputStream != null) {
-                    int currentWrite = writeIndex;
-                    int nextWrite = (currentWrite + 1) % RING_SIZE;
-                    if (nextWrite == readIndex) {
-                        readIndex = (readIndex + 1) % RING_SIZE;
-                    }
-                    System.arraycopy(lastConfigPacket, 0, ringBuffer[currentWrite], 0, 12);
-                    writeIndex = nextWrite;
-                    queueLock.notify();
+                    System.arraycopy(lastConfigPacket, 0, pendingConfigPacket, 0, TabletProtocol.PACKET_SIZE);
+                    hasPendingConfigPacket = true;
+                    queueLock.notifyAll();
                 }
             }
         } catch (Throwable t) {
@@ -292,7 +275,7 @@ public class TabletServerService extends Service {
                 byte[] packetToSend = null;
 
                 synchronized (queueLock) {
-                    while (writeIndex == readIndex && isConnected.get()) {
+                    while (!hasPendingConfigPacket && !hasPendingTouchPacket && isConnected.get()) {
                         try {
                             queueLock.wait(100);
                         } catch (InterruptedException e) {
@@ -300,10 +283,14 @@ public class TabletServerService extends Service {
                         }
                     }
 
-                    if (writeIndex != readIndex) {
-                        int currentRead = readIndex;
-                        packetToSend = ringBuffer[currentRead];
-                        readIndex = (currentRead + 1) % RING_SIZE;
+                    if (hasPendingConfigPacket) {
+                        System.arraycopy(pendingConfigPacket, 0, sendingConfigPacket, 0, TabletProtocol.PACKET_SIZE);
+                        hasPendingConfigPacket = false;
+                        packetToSend = sendingConfigPacket;
+                    } else if (hasPendingTouchPacket) {
+                        System.arraycopy(pendingTouchPacket, 0, sendingTouchPacket, 0, TabletProtocol.PACKET_SIZE);
+                        hasPendingTouchPacket = false;
+                        packetToSend = sendingTouchPacket;
                     }
                 }
 
@@ -337,7 +324,8 @@ public class TabletServerService extends Service {
             }
             isConnected.set(false);
             connectedClientInfo = null;
-            readIndex = writeIndex; // Clear pending packets
+            hasPendingTouchPacket = false;
+            hasPendingConfigPacket = false;
         }
         mainHandler.post(() -> updateNotification(false, null));
         notifyConnectionState(false, null);
@@ -370,16 +358,16 @@ public class TabletServerService extends Service {
                     synchronized (queueLock) {
                         activeSocket = client;
                         activeOutputStream = client.getOutputStream();
-                        readIndex = 0;
-                        writeIndex = 0;
+                        hasPendingTouchPacket = false;
+                        hasPendingConfigPacket = false;
                         isConnected.set(true);
 
                         // If we have a cached area configuration, send it immediately as the first packet
                         if (hasConfigPacket) {
-                            System.arraycopy(lastConfigPacket, 0, ringBuffer[0], 0, 12);
-                            writeIndex = 1;
+                            System.arraycopy(lastConfigPacket, 0, pendingConfigPacket, 0, TabletProtocol.PACKET_SIZE);
+                            hasPendingConfigPacket = true;
                         }
-                        queueLock.notify();
+                        queueLock.notifyAll();
                     }
 
                     final String info = connectedClientInfo;
