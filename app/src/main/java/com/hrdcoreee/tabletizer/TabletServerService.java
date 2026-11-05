@@ -44,6 +44,7 @@ public class TabletServerService extends Service {
     public static final int BEACON_PORT = 3242;
     private static final String CHANNEL_ID = "TabletizerService";
     private static final int NOTIFICATION_ID = 101;
+    private static final String ACTION_STOP = "com.hrdcoreee.tabletizer.action.STOP";
 
     public interface ConnectionListener {
         void onConnectionStateChanged(boolean connected, String clientInfo);
@@ -193,12 +194,6 @@ public class TabletServerService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        if (pm != null) {
-            cpuWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tabletizer:WakeLock");
-            cpuWakeLock.acquire(12 * 60 * 60 * 1000L); // 12 hours max
-        }
-
         WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (wm != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -206,8 +201,6 @@ public class TabletServerService extends Service {
             } else {
                 wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "tabletizer:HighPerfWifi");
             }
-            wifiLock.acquire();
-
             try {
                 multicastLock = wm.createMulticastLock("tabletizer:BeaconMulticast");
                 multicastLock.setReferenceCounted(true);
@@ -248,6 +241,8 @@ public class TabletServerService extends Service {
             flags |= PendingIntent.FLAG_IMMUTABLE;
         }
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, flags);
+        Intent stopIntent = new Intent(this, TabletServerService.class).setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getService(this, 1, stopIntent, flags);
 
         String statusText;
         if (connected) {
@@ -262,6 +257,7 @@ public class TabletServerService extends Service {
                 .setContentTitle("tabletizer Active")
                 .setContentText(statusText)
                 .setContentIntent(pendingIntent)
+                .addAction(0, "Stop", stopPendingIntent)
                 .setOngoing(true)
                 .setSilent(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
@@ -327,8 +323,27 @@ public class TabletServerService extends Service {
             hasPendingTouchPacket = false;
             hasPendingConfigPacket = false;
         }
+        releaseActiveConnectionLocks();
         mainHandler.post(() -> updateNotification(false, null));
         notifyConnectionState(false, null);
+    }
+
+    private void acquireActiveConnectionLocks() {
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (pm != null) {
+            if (cpuWakeLock == null) {
+                cpuWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tabletizer:ActiveConnection");
+                cpuWakeLock.setReferenceCounted(false);
+            }
+            if (!cpuWakeLock.isHeld()) cpuWakeLock.acquire();
+        }
+
+        if (wifiLock != null && !wifiLock.isHeld()) wifiLock.acquire();
+    }
+
+    private void releaseActiveConnectionLocks() {
+        if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
+        if (cpuWakeLock != null && cpuWakeLock.isHeld()) cpuWakeLock.release();
     }
 
     private void startServerThread() {
@@ -361,6 +376,7 @@ public class TabletServerService extends Service {
                         hasPendingTouchPacket = false;
                         hasPendingConfigPacket = false;
                         isConnected.set(true);
+                        acquireActiveConnectionLocks();
 
                         // If we have a cached area configuration, send it immediately as the first packet
                         if (hasConfigPacket) {
@@ -472,6 +488,11 @@ public class TabletServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            stopForeground(true);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         return START_NOT_STICKY;
     }
 
@@ -500,12 +521,7 @@ public class TabletServerService extends Service {
         if (multicastLock != null && multicastLock.isHeld()) {
             multicastLock.release();
         }
-        if (wifiLock != null && wifiLock.isHeld()) {
-            wifiLock.release();
-        }
-        if (cpuWakeLock != null && cpuWakeLock.isHeld()) {
-            cpuWakeLock.release();
-        }
+        releaseActiveConnectionLocks();
 
         super.onDestroy();
     }
