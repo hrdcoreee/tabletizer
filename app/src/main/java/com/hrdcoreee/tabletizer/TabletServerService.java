@@ -12,7 +12,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.os.StrictMode;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -72,7 +71,7 @@ public class TabletServerService extends Service {
 
     // Zero-allocation circular ring buffer for asynchronous high-speed network transmission
     private static final int RING_SIZE = 256;
-    private static final byte[][] ringBuffer = new byte[RING_SIZE][12];
+    private static final byte[][] ringBuffer = new byte[RING_SIZE][TabletProtocol.PACKET_SIZE];
     private static volatile int writeIndex = 0;
     private static volatile int readIndex = 0;
     private static final Object queueLock = new Object();
@@ -166,19 +165,7 @@ public class TabletServerService extends Service {
                     readIndex = (readIndex + 1) % RING_SIZE;
                 }
 
-                byte[] buffer = ringBuffer[currentWrite];
-                buffer[0] = 1; // Report ID for OpenTabletDriver FmaReportParser
-                buffer[1] = (byte) ((inRange ? 0x20 : 0) | (btn1 ? 0x02 : 0) | (btn2 ? 0x04 : 0));
-                buffer[2] = (byte) (x & 0xFF);
-                buffer[3] = (byte) ((x >> 8) & 0xFF);
-                buffer[4] = (byte) (y & 0xFF);
-                buffer[5] = (byte) ((y >> 8) & 0xFF);
-                buffer[6] = (byte) (pressure & 0xFF);
-                buffer[7] = (byte) ((pressure >> 8) & 0xFF);
-                buffer[8] = 0; // tiltX
-                buffer[9] = 0;
-                buffer[10] = 0; // tiltY
-                buffer[11] = 0;
+                TabletProtocol.writeTouch(ringBuffer[currentWrite], inRange, x, y, pressure, btn1, btn2);
 
                 writeIndex = nextWrite;
                 queueLock.notify();
@@ -192,26 +179,8 @@ public class TabletServerService extends Service {
                                   float widthMm, float heightMm, float posXMm, float posYMm) {
         try {
             synchronized (queueLock) {
-                lastConfigPacket[0] = 2; // Report ID 2 = Config Sync Packet
-                lastConfigPacket[1] = (byte) (ratioOrdinal & 0xFF);
-                lastConfigPacket[2] = (byte) (scalePercent & 0xFF);
-                lastConfigPacket[3] = (byte) (positionOrdinal & 0xFF);
-
-                short w = (short) Math.round(widthMm * 10f);
-                lastConfigPacket[4] = (byte) (w & 0xFF);
-                lastConfigPacket[5] = (byte) ((w >> 8) & 0xFF);
-
-                short h = (short) Math.round(heightMm * 10f);
-                lastConfigPacket[6] = (byte) (h & 0xFF);
-                lastConfigPacket[7] = (byte) ((h >> 8) & 0xFF);
-
-                short x = (short) Math.round(posXMm * 10f);
-                lastConfigPacket[8] = (byte) (x & 0xFF);
-                lastConfigPacket[9] = (byte) ((x >> 8) & 0xFF);
-
-                short y = (short) Math.round(posYMm * 10f);
-                lastConfigPacket[10] = (byte) (y & 0xFF);
-                lastConfigPacket[11] = (byte) ((y >> 8) & 0xFF);
+                TabletProtocol.writeConfig(lastConfigPacket, ratioOrdinal, scalePercent, positionOrdinal,
+                        widthMm, heightMm, posXMm, posYMm);
 
                 hasConfigPacket = true;
 
@@ -240,11 +209,6 @@ public class TabletServerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-
-        try {
-            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().permitAll().build());
-        } catch (Throwable ignored) {
-        }
 
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (pm != null) {
@@ -431,9 +395,10 @@ public class TabletServerService extends Service {
                             int read = in.read(inBuf, offset, inBuf.length - offset);
                             if (read == -1) break;
                             offset += read;
+                            if (read == 0) continue;
                             if (offset == inBuf.length) {
                                 offset = 0;
-                                if (inBuf[0] == 2) {
+                                if (inBuf[0] == TabletProtocol.CONFIG_REPORT_ID) {
                                     // Config Sync from OTD
                                     int wVal = (inBuf[4] & 0xFF) | ((inBuf[5] & 0xFF) << 8);
                                     int hVal = (inBuf[6] & 0xFF) | ((inBuf[7] & 0xFF) << 8);
@@ -445,7 +410,11 @@ public class TabletServerService extends Service {
                                     float posXMm = xVal / 10.0f;
                                     float posYMm = yVal / 10.0f;
 
-                                    notifyAreaConfigReceived(widthMm, heightMm, posXMm, posYMm);
+                                    if (TabletProtocol.isValidArea(widthMm, heightMm, posXMm, posYMm)) {
+                                        notifyAreaConfigReceived(widthMm, heightMm, posXMm, posYMm);
+                                    } else {
+                                        Log.w(TAG, "Rejected invalid area configuration from client.");
+                                    }
                                 }
                             }
                         }
@@ -515,7 +484,7 @@ public class TabletServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
     @Override

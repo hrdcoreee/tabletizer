@@ -2,6 +2,7 @@ package com.hrdcoreee.tabletizer;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -558,6 +559,13 @@ public class TabletAreaView extends View {
                 || toolType == MotionEvent.TOOL_TYPE_UNKNOWN;
     }
 
+    private boolean isStylusButtonPressed(MotionEvent event, boolean primary) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false;
+        return event.isButtonPressed(primary
+                ? MotionEvent.BUTTON_STYLUS_PRIMARY
+                : MotionEvent.BUTTON_STYLUS_SECONDARY);
+    }
+
     private void sendPosition(float touchX, float touchY, float rawPressure, boolean buttonPrimary, boolean buttonSecondary) {
         if (activeRect.width() <= 0 || activeRect.height() <= 0) return;
 
@@ -705,8 +713,8 @@ public class TabletAreaView extends View {
             }
 
             int action = event.getActionMasked();
-            boolean buttonPrimary = event.isButtonPressed(MotionEvent.BUTTON_STYLUS_PRIMARY);
-            boolean buttonSecondary = event.isButtonPressed(MotionEvent.BUTTON_STYLUS_SECONDARY);
+            boolean buttonPrimary = isStylusButtonPressed(event, true);
+            boolean buttonSecondary = isStylusButtonPressed(event, false);
 
             if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
                 float touchX = event.getX();
@@ -774,8 +782,8 @@ public class TabletAreaView extends View {
                     invalidate();
 
                     sendPosition(touchX, touchY, 0f,
-                            event.isButtonPressed(MotionEvent.BUTTON_STYLUS_PRIMARY),
-                            event.isButtonPressed(MotionEvent.BUTTON_STYLUS_SECONDARY));
+                            isStylusButtonPressed(event, true),
+                            isStylusButtonPressed(event, false));
                     return true;
                 } else if (isPenActive) {
                     handleOutOfRange();

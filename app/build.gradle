@@ -55,6 +55,8 @@ tasks.withType(JavaCompile).configureEach {
 dependencies {
     implementation 'androidx.core:core:1.13.1'
     implementation 'androidx.activity:activity:1.9.1'
+
+    testImplementation 'junit:junit:4.13.2'
 }
 
 configurations.implementation {

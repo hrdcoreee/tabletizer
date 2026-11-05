@@ -11,7 +11,6 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.StrictMode;
 import android.view.Display;
 import android.view.View;
 import android.view.WindowManager;
@@ -80,11 +79,6 @@ public class MainActivity extends ComponentActivity implements TabletServerServi
 
         TabletServerService.setConnectionListener(this);
         TabletServerService.setStatsListener(this);
-
-        try {
-            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().permitAll().build());
-        } catch (Throwable ignored) {
-        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
